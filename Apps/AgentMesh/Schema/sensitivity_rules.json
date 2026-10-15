@@ -1,0 +1,204 @@
+{
+  "REGEX_PATTERNS": [
+    {
+      "pattern": "\\b\\d{4}\\s?\\d{4}\\s?\\d{4}\\b",
+      "category": "PII",
+      "entity_type": "AADHAAR_NUMBER"
+    },
+    {
+      "pattern": "\\b[A-Z]{5}\\d{4}[A-Z]\\b",
+      "category": "PII",
+      "entity_type": "PAN_NUMBER"
+    },
+    {
+      "pattern": "\\b[A-Z]{1,2}\\d{7}\\b",
+      "category": "PII",
+      "entity_type": "PASSPORT_NUMBER"
+    },
+    {
+      "pattern": "\\b(\\+91[\\s\\-]?)?[6-9]\\d{9}\\b",
+      "category": "PII",
+      "entity_type": "IN_PHONE_NUMBER"
+    },
+    {
+      "pattern": "\\b[\\w.+-]+@[\\w\\-]+\\.[a-zA-Z]{2,}\\b",
+      "category": "PII",
+      "entity_type": "EMAIL_ADDRESS"
+    },
+    {
+      "pattern": "(?i)\\b(DOB|date\\s+of\\s+birth)[:\\s]+\\d{1,2}[\\/\\-]\\d{1,2}[\\/\\-]\\d{2,4}\\b",
+      "category": "PII",
+      "entity_type": "DATE_OF_BIRTH"
+    },
+    {
+      "pattern": "(?i)\\bfather'?s?\\s+name[:\\s]+[A-Za-z\\s]{3,40}\\b",
+      "category": "PII",
+      "entity_type": "FATHER_NAME"
+    },
+    {
+      "pattern": "(?i)\\bVoter[\\s\\-]?ID[:\\s#]*[A-Z]{3}\\d{7}\\b",
+      "category": "PII",
+      "entity_type": "VOTER_ID"
+    },
+    {
+      "pattern": "(?i)\\bDL[\\s\\-]?No\\.?[:\\s]*[A-Z]{2}\\d{2}\\s?\\d{11}\\b",
+      "category": "PII",
+      "entity_type": "DRIVING_LICENCE"
+    },
+    {
+      "pattern": "\\b\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\b",
+      "category": "PII",
+      "entity_type": "IP_ADDRESS"
+    },
+    {
+      "pattern": "\\b([0-9a-fA-F]{2}[:-]){5}([0-9a-fA-F]{2})\\b",
+      "category": "PII",
+      "entity_type": "MAC_ADDRESS"
+    },
+    {
+      "pattern": "(?i)\\bSSN[:\\s]*\\d{3}-\\d{2}-\\d{4}\\b",
+      "category": "PII",
+      "entity_type": "US_SSN"
+    },
+    {
+      "pattern": "(?i)\\b(NIN|National\\sInsurance\\sNumber)[:\\s]*[A-CEGHJ-PR-TW-Z]{1}[A-CEGHJ-NPR-TW-Z]{1}[0-9]{6}[A-D]{1}\\b",
+      "category": "PII",
+      "entity_type": "UK_NIN"
+    },
+    {
+      "pattern": "\\b(?:4\\d{3}|5[1-5]\\d{2}|6\\d{3})[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}[\\s\\-]?\\d{4}\\b",
+      "category": "PCI",
+      "entity_type": "CREDIT_CARD_NUMBER"
+    },
+    {
+      "pattern": "\\b3[47]\\d{2}[\\s\\-]?\\d{6}[\\s\\-]?\\d{5}\\b",
+      "category": "PCI",
+      "entity_type": "AMEX_CARD_NUMBER"
+    },
+    {
+      "pattern": "(?i)\\bCVV[:\\s]+\\d{3,4}\\b",
+      "category": "PCI",
+      "entity_type": "CVV_CODE"
+    },
+    {
+      "pattern": "(?i)\\b(Expiry|Exp\\.?|Valid\\s+Thru?)[:\\s]+\\d{2}[\\/\\-]\\d{2,4}\\b",
+      "category": "PCI",
+      "entity_type": "CARD_EXPIRY"
+    },
+    {
+      "pattern": "(?i)\\bIFSC[:\\s]+[A-Z]{4}0[A-Z0-9]{6}\\b",
+      "category": "PCI",
+      "entity_type": "IFSC_CODE"
+    },
+    {
+      "pattern": "(?i)\\b(Account\\s+No\\.?|Acct\\s+No\\.?|A\\/C)[:\\s]+\\d{9,18}\\b",
+      "category": "PCI",
+      "entity_type": "BANK_ACCOUNT_NUMBER"
+    },
+    {
+      "pattern": "\\b[A-Z]{2}\\d{2}[A-Z0-9]{1,30}\\b",
+      "category": "PCI",
+      "entity_type": "IBAN_CODE_GENERAL"
+    },
+    {
+      "pattern": "\\b[A-Z]\\d{2}(?:\\.\\d{1,2})?\\b",
+      "category": "PHI",
+      "entity_type": "ICD10_CODE"
+    },
+    {
+      "pattern": "(?i)\\b(MRN|Patient\\s+ID|Med\\s+Rec)[:\\s#]+[\\w\\-]+\\b",
+      "category": "PHI",
+      "entity_type": "MEDICAL_RECORD_NUMBER"
+    },
+    {
+      "pattern": "\\b\\d+(?:\\.\\d+)?\\s*(mg|ml|mcg|units?|tablets?|capsules?)\\b",
+      "category": "PHI",
+      "entity_type": "MEDICAL_DOSAGE"
+    },
+    {
+      "pattern": "(?i)\\b(HIV|AIDS|cancer|diabetes|hypertension|tuberculosis|TB|hepatitis|covid-19|sars-cov-2)\\b",
+      "category": "PHI",
+      "entity_type": "MEDICAL_CONDITION"
+    },
+    {
+      "pattern": "(?i)\\b(blood\\s+group|blood\\s+type)[:\\s]+(?:A|B|AB|O)[+-]\\b",
+      "category": "PHI",
+      "entity_type": "BLOOD_GROUP"
+    },
+    {
+      "pattern": "(?i)\\b(prescription|rx)[:\\s]+[A-Za-z0-9\\s]{3,20}\\b",
+      "category": "PHI",
+      "entity_type": "PRESCRIPTION"
+    },
+    {
+      "pattern": "\\bASSET-[A-Z]{2}-\\d{4}\\b",
+      "category": "CUSTOM",
+      "entity_type": "LAPTOP_ASSET_TAG"
+    },
+    {
+      "pattern": "\\bASSET-[A-Z]{2}-\\d{4}\\b",
+      "category": "CUSTOM",
+      "entity_type": "LAPTOP_ASSET_ID"
+    },
+    {
+      "pattern": "\\bASSET-[A-Z]{2}-\\d{4}\\b",
+      "category": "IT SECURITY",
+      "entity_type": "LAPTOP_ASSET_TAG"
+    },
+    {
+      "pattern": "(?i)\\b(Annual\\s+Income|CIBIL\\s+Score|Credit\\s+Score|Net\\s+Worth)[:\\s]+[\\d,₹$£€Rs\\s]+\\b",
+      "category": "CONFIDENTIAL",
+      "entity_type": "FINANCIAL_FIGURE"
+    },
+    {
+      "pattern": "(?i)\\b(Employer|Organisation|Company)[:\\s]+[A-Za-z0-9\\s&.]{3,50}",
+      "category": "CONFIDENTIAL",
+      "entity_type": "EMPLOYER_NAME"
+    }
+  ],
+  "CRITICALITY_MAP": {
+    "AADHAAR_NUMBER": "HIGH",
+    "PAN_NUMBER": "HIGH",
+    "PASSPORT_NUMBER": "HIGH",
+    "VOTER_ID": "HIGH",
+    "DRIVING_LICENCE": "HIGH",
+    "IN_AADHAAR": "HIGH",
+    "IN_PAN": "HIGH",
+    "IN_PASSPORT": "HIGH",
+    "IN_VOTER_NUMBER": "HIGH",
+    "CREDIT_CARD_NUMBER": "HIGH",
+    "AMEX_CARD_NUMBER": "HIGH",
+    "CVV_CODE": "HIGH",
+    "CARD_EXPIRY": "HIGH",
+    "CREDIT_CARD": "HIGH",
+    "BANK_ACCOUNT_NUMBER": "HIGH",
+    "IFSC_CODE": "HIGH",
+    "IBAN_CODE": "HIGH",
+    "IBAN_CODE_GENERAL": "HIGH",
+    "US_SSN": "HIGH",
+    "UK_NIN": "HIGH",
+    "MEDICAL_RECORD_NUMBER": "HIGH",
+    "MEDICAL_CONDITION": "HIGH",
+    "MEDICAL_DOSAGE": "HIGH",
+    "ICD10_CODE": "HIGH",
+    "BLOOD_GROUP": "HIGH",
+    "MEDICAL_LICENSE": "HIGH",
+    "PRESCRIPTION": "HIGH",
+    "DATE_OF_BIRTH": "MEDIUM",
+    "FATHER_NAME": "MEDIUM",
+    "IP_ADDRESS": "MEDIUM",
+    "MAC_ADDRESS": "MEDIUM",
+    "IN_PHONE_NUMBER": "LOW",
+    "PHONE_NUMBER": "LOW",
+    "EMAIL_ADDRESS": "LOW",
+    "PERSON": "LOW",
+    "LOCATION": "LOW",
+    "DATE_TIME": "LOW",
+    "URL": "LOW",
+    "NRP": "LOW",
+    "LAPTOP_ASSET_TAG": "HIGH",
+    "LAPTOP_ASSET_ID": "HIGH",
+    "FINANCIAL_FIGURE": "MEDIUM",
+    "EMPLOYER_NAME": "MEDIUM"
+  }
+}

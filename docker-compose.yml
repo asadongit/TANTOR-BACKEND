@@ -1,0 +1,15 @@
+version: '3.8'
+
+services:
+  agentmesh-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: agentmesh_backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./app.log:/app/app.log
+    restart: unless-stopped
