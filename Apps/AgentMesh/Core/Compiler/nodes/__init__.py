@@ -71,6 +71,8 @@ from .stamp_matcher_node import build_stamp_matcher_node
 from .image_validator_node import build_image_validator_node
 from .vision_intelligence_node import build_vision_intelligence_node
 from .multi_file_ingestion import build_multi_file_ingestion_node
+from .excel_to_json_node import build_excel_to_json_node
+from .jev_node import build_jev_node
 
 __all__ = [
     "build_multi_file_ingestion_node",
@@ -132,4 +134,6 @@ __all__ = [
     "build_signature_matcher_node",
     "build_stamp_matcher_node",
     "build_image_validator_node",
+    "build_excel_to_json_node",
+    "build_jev_node",
 ]

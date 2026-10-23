@@ -979,6 +979,38 @@ class NodeConfig(BaseModel):
         None, description="Status to emit (e.g., awaiting_classification_review)"
     )
 
+    # Excel to JSON Node Configs
+    excel_input_key: Optional[str] = Field(
+        None, description="Context key containing the uploaded file path"
+    )
+    excel_output_key: str = Field(
+        "excel_json_data", description="Context key to store full parsed JSON dataset"
+    )
+    excel_sample_output_key: str = Field(
+        "excel_sample_data", description="Context key to store lightweight sample preview for LLMs"
+    )
+    excel_sample_limit: int = Field(
+        5, description="Number of sample rows to extract for LLM agents"
+    )
+    excel_sample_method: str = Field(
+        "first", description="Sample selection method: 'first' (sequential) or 'random'"
+    )
+    excel_row_limit: Optional[int] = Field(
+        None, description="Total row cap on parsed dataset (0 or None = all rows)"
+    )
+    excel_sheet_name: Optional[Any] = Field(
+        0, description="Worksheet name or index (default: 0)"
+    )
+    excel_orientation: str = Field(
+        "records", description="JSON orientation (records, columns, split, etc.)"
+    )
+    excel_headers_only: bool = Field(
+        False, description="Extract only column headers without row data"
+    )
+    excel_handle_nulls: str = Field(
+        "none", description="Null value handling (none, empty_string, drop_rows, drop_cols)"
+    )
+
     @field_validator("payload_template", mode="before")
     @classmethod
     def parse_json_strings(cls, v):
@@ -1187,3 +1219,83 @@ class NodeConfig(BaseModel):
     email_google_delegated_user: Optional[str] = Field(
         None, description="Workspace email to impersonate for Gmail OAuth"
     )
+
+    # ── Jev (System One by TypeSafe AI) Specific Configs ───────────────────────
+    jev_model: str = Field(
+        "jev-latest",
+        description="TypeSafe AI model version: 'jev-latest', 'jev-1.14', etc.",
+    )
+    jev_api_key_env: str = Field(
+        "TYPESAFE_API_KEY",
+        description="Environment variable name containing the TypeSafe API key.",
+    )
+    jev_api_key: Optional[str] = Field(
+        None,
+        description="Direct API key override for TypeSafe AI Jev.",
+        repr=False,
+    )
+    jev_api_url: str = Field(
+        "https://api.typesafe.ai/v1/systemone",
+        description="TypeSafe API endpoint URL. Override for self-hosted or proxy.",
+    )
+    jev_input_key: Optional[str] = Field(
+        "excel_json_data",
+        description="Context key containing the input text, dict, or list of JSON records to evaluate.",
+    )
+    jev_output_key: Optional[str] = Field(
+        "excel_json_data",
+        description="Context key where evaluated/tagged records or answers will be stored.",
+    )
+    jev_mode: str = Field(
+        "items",
+        description="Evaluation mode: 'items' iterates over a list/collection of records; 'single' evaluates one unified state.",
+    )
+    jev_item_fields: Optional[List[str]] = Field(
+        None,
+        description="Optional list of column/field names to extract from each item to build the state string (e.g. ['Plugin Name', 'Plugin Family']).",
+    )
+    jev_tag_target_key: str = Field(
+        "category",
+        description="The key on each item to write the winning choice/category answer into.",
+    )
+    jev_state_template: Optional[str] = Field(
+        None,
+        description="Optional Jinja2/f-string template to format each state string.",
+    )
+    jev_questions: Dict[str, Dict[str, Any]] = Field(
+        default_factory=dict,
+        description="Dictionary of typed questions: {question_id: {type: 'choice'|'score'|'noul', instructions: str, criteria?: dict, options?: list, levels?: list}}",
+    )
+    jev_confidence_gate: Optional[float] = Field(
+        None,
+        description="Optional confidence threshold. If set, items with lower confidence can be flagged.",
+    )
+    jev_timeout_seconds: float = Field(
+        15.0,
+        description="HTTP timeout for the TypeSafe API call in seconds.",
+    )
+    jev_concurrency: int = Field(
+        25,
+        description="Max concurrent requests to Jev API when processing items in a list.",
+    )
+    jev_batch_progress_size: int = Field(
+        100,
+        description=(
+            "Number of rows to complete before emitting one SSE progress event. "
+            "Configurable from canvas (e.g. 50, 100, 200). Default is 100. "
+            "Only used when jev_stream_progress is True or via stream-evaluate."
+        ),
+    )
+    jev_stream_progress: bool = Field(
+        False,
+        description=(
+            "If True, the node emits SSE progress events after every jev_batch_progress_size "
+            "rows complete during workflow execution."
+        ),
+    )
+    jev_fallback_to_heuristic: bool = Field(
+        False,
+        description="Deprecated/Disabled. If True, allowed keyword heuristics. Now strictly defaults to False for accurate unclassified tagging.",
+    )
+
+

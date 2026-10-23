@@ -256,6 +256,10 @@ def build_llm_deep_agent(node_config: NodeConfig, all_nodes: List[NodeConfig] = 
                 except Exception as pe:
                     logger.warning(f"Failed to dynamically register harness profile: {pe}")
                 
+                tool_interrupts = {
+                    t: True for t in node_config.tools
+                    if (getattr(node_config, "tool_configs", {}) or {}).get(t, {}).get("require_approval", False)
+                }
                 agent = create_deep_agent(
                     model=llm,
                     tools=sanitized_tools,
@@ -264,7 +268,7 @@ def build_llm_deep_agent(node_config: NodeConfig, all_nodes: List[NodeConfig] = 
                     backend=backend,
                     subagents=resolved_subagents,
                     context_schema=node_config.context_schema,
-                    interrupt_on={t: True for t in node_config.tools} if getattr(node_config, "interrupt_before", False) else None
+                    interrupt_on=tool_interrupts if tool_interrupts else None,
                 )
                 _agent_cache[cache_key] = agent
 

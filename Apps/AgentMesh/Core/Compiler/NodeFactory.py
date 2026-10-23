@@ -70,6 +70,12 @@ _NODE_BUILDER_MAP: Dict[str, Callable] = {
     "stamp_matcher": node_builders.build_stamp_matcher_node,
     "image_validator": node_builders.build_image_validator_node,
     "vision_intelligence": node_builders.build_vision_intelligence_node,
+    "excel_to_json": node_builders.build_excel_to_json_node,
+    "excel_to_json_node": node_builders.build_excel_to_json_node,
+    "jev": node_builders.build_jev_node,
+    "jev_node": node_builders.build_jev_node,
+    "typesafe_ai": node_builders.build_jev_node,
+    "system_one": node_builders.build_jev_node,
 }
 
 
@@ -104,6 +110,10 @@ class NodeFactory:
         "json_transform_va": "json_transform",
         "pattern_extract": "json_transform",
         "rule_engine": "json_transform",
+        "jevNode": "jev_node",
+        "systemOne": "jev_node",
+        "systemone": "jev_node",
+        "typesafe_system_one": "jev_node",
     }
 
     @classmethod

@@ -1,0 +1,314 @@
+{
+  "summary": {
+    "app": 17,
+    "os": 1
+  },
+  "rows": [
+    {
+      "index": 0,
+      "file": "usr/local/bin/aws_signing_helper",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/local/bin/aws_signing_helper | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.89,
+      "probabilities": {
+        "os": 0.07,
+        "network": 0.0,
+        "db": 0.0,
+        "app": 0.91,
+        "other": 0.01,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 1,
+      "file": "usr/lib/snapd/snap-exec",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-exec | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.48,
+      "probabilities": {
+        "os": 0.39,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.57,
+        "other": 0.01,
+        "insufficient_info": 0.02
+      }
+    },
+    {
+      "index": 2,
+      "file": "usr/lib/snapd/snap-bootstrap",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-bootstrap | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.48,
+      "probabilities": {
+        "os": 0.42,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.5700000000000001,
+        "other": 0.0,
+        "insufficient_info": 0.0
+      }
+    },
+    {
+      "index": 3,
+      "file": "usr/lib/snapd/snapd",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snapd | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.75,
+      "probabilities": {
+        "os": 0.19,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.79,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 4,
+      "file": "usr/lib/snapd/snap-preseed",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-preseed | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.59,
+      "probabilities": {
+        "os": 0.32,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.66,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 5,
+      "file": "usr/lib/snapd/snap-fde-keymgr",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-fde-keymgr | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.69,
+      "probabilities": {
+        "os": 0.26,
+        "network": 0.0,
+        "db": 0.0,
+        "app": 0.74,
+        "other": 0.0,
+        "insufficient_info": 0.0
+      }
+    },
+    {
+      "index": 6,
+      "file": "usr/lib/snapd/snap-recovery-chooser",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-recovery-chooser | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.7,
+      "probabilities": {
+        "os": 0.23,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.75,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 7,
+      "file": "usr/bin/snap",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/bin/snap | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.41,
+      "probabilities": {
+        "os": 0.43,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.51,
+        "other": 0.01,
+        "insufficient_info": 0.04
+      }
+    },
+    {
+      "index": 8,
+      "file": "usr/lib/snapd/snapctl",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snapctl | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.66,
+      "probabilities": {
+        "os": 0.26,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.72,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 9,
+      "file": "usr/lib/snapd/snap-update-ns",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-update-ns | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "os",
+      "confidence": 0.42,
+      "probabilities": {
+        "os": 0.52,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.46,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 10,
+      "file": "usr/lib/snapd/snap-repair",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-repair | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.58,
+      "probabilities": {
+        "os": 0.33,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.65,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 11,
+      "file": "usr/bin/dockerd",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/bin/dockerd | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.74,
+      "probabilities": {
+        "os": 0.19,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.78,
+        "other": 0.0,
+        "insufficient_info": 0.02
+      }
+    },
+    {
+      "index": 12,
+      "file": "usr/bin/containerd",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/bin/containerd | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.74,
+      "probabilities": {
+        "os": 0.19,
+        "network": 0.0,
+        "db": 0.0,
+        "app": 0.78,
+        "other": 0.0,
+        "insufficient_info": 0.03
+      }
+    },
+    {
+      "index": 13,
+      "file": "usr/local/bin/docker-compose",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-46595",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/local/bin/docker-compose | related_cve: CVE-2026-46595 | cwe_id: CWE-863,CWE-303 | cwe_description: Authorization bypass possible",
+      "choice": "app",
+      "confidence": 0.81,
+      "probabilities": {
+        "os": 0.06,
+        "network": 0.0,
+        "db": 0.0,
+        "app": 0.84,
+        "other": 0.01,
+        "insufficient_info": 0.09
+      }
+    },
+    {
+      "index": 14,
+      "file": "usr/local/bin/aws_signing_helper",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2024-45337",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/local/bin/aws_signing_helper | related_cve: CVE-2024-45337",
+      "choice": "app",
+      "confidence": 0.94,
+      "probabilities": {
+        "os": 0.04,
+        "network": 0.0,
+        "db": 0.0,
+        "app": 0.95,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 15,
+      "file": "usr/local/bin/aws_signing_helper",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-42508",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/local/bin/aws_signing_helper | related_cve: CVE-2026-42508 | cwe_id: CWE-295,CWE-295 | cwe_description: Certificate not properly validated",
+      "choice": "app",
+      "confidence": 0.92,
+      "probabilities": {
+        "os": 0.04,
+        "network": 0.01,
+        "db": 0.0,
+        "app": 0.93,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 16,
+      "file": "usr/lib/snapd/snap-preseed",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-42508",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snap-preseed | related_cve: CVE-2026-42508 | cwe_id: CWE-295,CWE-295 | cwe_description: Certificate not properly validated",
+      "choice": "app",
+      "confidence": 0.66,
+      "probabilities": {
+        "os": 0.21,
+        "network": 0.06,
+        "db": 0.0,
+        "app": 0.72,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    },
+    {
+      "index": 17,
+      "file": "usr/lib/snapd/snapctl",
+      "package": "golang.org/x/crypto",
+      "cve": "CVE-2026-42508",
+      "state_str": "affected_package: golang.org/x/crypto | affected_file: usr/lib/snapd/snapctl | related_cve: CVE-2026-42508 | cwe_id: CWE-295,CWE-295 | cwe_description: Certificate not properly validated",
+      "choice": "app",
+      "confidence": 0.72,
+      "probabilities": {
+        "os": 0.17,
+        "network": 0.05,
+        "db": 0.0,
+        "app": 0.77,
+        "other": 0.0,
+        "insufficient_info": 0.01
+      }
+    }
+  ]
+}

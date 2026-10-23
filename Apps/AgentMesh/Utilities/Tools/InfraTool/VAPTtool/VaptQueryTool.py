@@ -1,58 +1,48 @@
 import os
 import json
 import logging
-from typing import List, Optional
+from typing import Any, List, Optional
 from langchain_core.tools import tool
+from langchain_core.runnables import RunnableConfig
 from Apps.AgentMesh.Schema.ToolSchema import ToolMeta
 from Apps.AgentMesh.Core.ToolRegistry import registry
-import pandas as pd
+from Apps.AgentMesh.Utilities.Tools.InfraTool.VAPTtool.vapt_helper import resolve_vapt_file, load_vapt_dataframe, normalize_severity
 
 logger = logging.getLogger(__name__)
 
 @tool
-def query_vapt_report(file_path: str, search_column: str, search_value: str, columns_to_return: Optional[List[str]] = None) -> str:
+def query_vapt_report(
+    file_path: str = "",
+    search_column: str = "",
+    search_value: str = "",
+    columns_to_return: Optional[List[str]] = None,
+    sheet_name: str = "",
+    config: RunnableConfig = None,
+    **kwargs: Any
+) -> str:
     """
-    Search and query specific data from a VAPT report CSV/XLSX file dynamically.
-    - file_path: The full absolute file path to the report.
+    Search and query specific data from a VAPT report Excel (.xlsx/.xls) or CSV file dynamically.
+    - file_path: The file path, artifact URI (artifact://<id>), or leave empty to auto-detect the uploaded scan.
     - search_column: The column to filter by (e.g., 'cve', 'host', 'plugin name', 'severity').
     - search_value: The value to search for within that column (e.g., 'CVE-2021-44228', '192.168.1.5'). It uses a partial case-insensitive match.
     - columns_to_return: A list of specific column names to return (e.g., ['plugin name', 'solution', 'cve']). If empty, returns all columns.
+    - sheet_name: Optional Excel sheet name or index.
     
     Use this tool when you need specific details (like the remedy/solution for a specific CVE or host) without loading the entire file.
     """
-    file_path = file_path.strip().strip('"').strip("'") if file_path else ""
-
-    if not os.path.exists(file_path):
-        # Try mnt/temp directory broadly as a fallback
-        temp_dir = os.path.join(os.getcwd(), "mnt", "temp")
-        if os.path.exists(temp_dir):
-            candidates = []
-            for root, _, files in os.walk(temp_dir):
-                for f in files:
-                    if f.endswith(('.csv', '.xlsx')):
-                        candidates.append(os.path.join(root, f))
-            if candidates:
-                # Sort by modification time, newest first
-                candidates.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-                file_path = candidates[0]
-                logger.info(f"VAPT Query Tool: Falling back to most recent upload: {file_path}")
-            else:
-                return f"Error: File not found at '{file_path}' and no fallback uploads exist in {temp_dir}."
-        else:
-            return f"Error: File not found at '{file_path}'"
+    resolved_path, err = resolve_vapt_file(file_path, config=config)
+    if err or not resolved_path:
+        return err or f"Error: Could not locate VAPT report file '{file_path}'."
 
     try:
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext in ('.xlsx', '.xls'):
-            df = pd.read_excel(file_path)
-        else:
-            df = pd.read_csv(file_path)
+        df = load_vapt_dataframe(resolved_path, sheet_name=sheet_name)
 
         if df is None or df.empty:
-            return "Error: No data found in the file."
+            return "Error: No data found in the report file."
 
         # Normalize column names to lowercase and strip whitespace
         df.columns = [str(c).strip().lower() for c in df.columns]
+        df = df.loc[:, ~df.columns.duplicated(keep="first")]
         
         search_col_norm = search_column.strip().lower()
         
@@ -72,11 +62,9 @@ def query_vapt_report(file_path: str, search_column: str, search_value: str, col
         # Fill NA with empty string to avoid errors during string matching
         df[matched_col] = df[matched_col].astype(str).fillna('')
         
-        if matched_col in ['severity', 'risk', 'risk_factor']:
-            numeric_to_label = {"4": "critical", "3": "high", "2": "medium", "1": "low", "0": "info"}
-            mapped_search_val = numeric_to_label.get(search_val_str, search_val_str)
-            # create a temporary series for matching
-            mapped_series = df[matched_col].apply(lambda x: numeric_to_label.get(str(x).strip(), str(x)).lower())
+        if matched_col in ['severity', 'risk', 'risk_factor', 'severity level']:
+            mapped_search_val = normalize_severity(search_val_str)
+            mapped_series = df[matched_col].apply(lambda x: normalize_severity(x))
             filtered_df = df[mapped_series.str.contains(mapped_search_val, na=False, regex=False)]
         else:
             filtered_df = df[df[matched_col].str.lower().str.contains(search_val_str, na=False, regex=False)]
@@ -97,7 +85,7 @@ def query_vapt_report(file_path: str, search_column: str, search_value: str, col
             if target_cols:
                 filtered_df = filtered_df[target_cols]
                 
-        # strictly prevent LLM context window exhaustion, limit the results
+        # Strictly prevent LLM context window exhaustion, limit the results
         MAX_ROWS = 25
         total_matched = len(filtered_df)
         
@@ -107,12 +95,11 @@ def query_vapt_report(file_path: str, search_column: str, search_value: str, col
             is_truncated = True
             
         # Convert to dictionary for JSON output
-        # Fill NA for all columns to prevent unquoted NaN in JSON
-        # Cast to string to ensure Pandas Timestamp objects are JSON serializable
         results = filtered_df.fillna('').astype(str).to_dict(orient='records')
         
         summary = {
             "status": "success",
+            "file_queried": os.path.basename(resolved_path),
             "total_matches": total_matched,
             "returned_rows": len(results),
             "data": results
@@ -131,7 +118,7 @@ def query_vapt_report(file_path: str, search_column: str, search_value: str, col
         return return_str
 
     except Exception as e:
-        logger.error(f"VAPT Query Tool: Error processing {file_path}: {e}")
+        logger.error(f"VAPT Query Tool: Error processing {resolved_path}: {e}")
         return f"Error querying VAPT file: {str(e)}"
 
 # Register the tool
@@ -140,7 +127,7 @@ registry.register(
     ToolMeta(
         name="query_vapt_report",
         display_name="VAPT Dynamic Query",
-        description="Search a VAPT report dynamically by column and value. Limits results to save LLM tokens.",
+        description="Search a VAPT report Excel/CSV dynamically by column and value. Limits results to save LLM tokens.",
         category="SecurityTools"
     )
 )

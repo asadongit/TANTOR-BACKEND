@@ -742,7 +742,7 @@ def wrap_with_error_handling(node_id: str, func: Any, label: Optional[str] = Non
                     
                     # Calculate delta: only record keys that were actually added or modified in this node's execution
                     GLOBAL_PERSISTENT_KEYS = ("thread_id", "workflow_id", "workflow_name", "vfs", "hitl_action", "hitl_feedback")
-                    INTERNAL_RESERVED = ("nodes", "msg")
+                    INTERNAL_RESERVED = ("nodes", "msg", "context", "data")
                     
                     clean_res = {}
                     for k, v in node_output.items():

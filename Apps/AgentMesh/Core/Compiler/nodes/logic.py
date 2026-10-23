@@ -285,14 +285,10 @@ def build_condition_node(node_config: NodeConfig) -> Callable:
             logger.error(f"Logic Node {node_config.id} [Condition]: Evaluation Fail on '{clean_expr}': {e}")
             intent = "false"
             
-        # Persistent Context update should only include data keys, not ephemeral keywords like 'msg'
-        clean_context = {k: v for k, v in full_scope.items() if k not in ("msg", "data")}
-            
         logger.info(f"Logic Node {node_config.id} [Condition]: '{clean_expr}' -> Result: {intent}")
         return {
             "intent": intent, 
-            "active_agent": node_config.id,
-            "context": clean_context
+            "active_agent": node_config.id
         }
 
     return condition_node
@@ -357,14 +353,10 @@ def build_switch_node(node_config: NodeConfig) -> Callable:
             except Exception as e:
                 logger.error(f"Logic Node {node_config.id} [Switch]: Branch '{name}' eval failed: {e}")
         
-        # Persist only state keys
-        clean_context = {k: v for k, v in full_scope.items() if k not in ("msg", "data")}
-        
         logger.info(f"Logic Node {node_config.id} [Switch]: Routing to branch '{matched_intent}'")
         return {
             "intent": matched_intent,
-            "active_agent": node_config.id,
-            "context": clean_context
+            "active_agent": node_config.id
         }
 
     return switch_node
@@ -415,11 +407,12 @@ def build_set_data_node(node_config: NodeConfig) -> Callable:
             pass # Not JSON
             
         # 3. Build the final context update
-        # Merge existing keys + my own new keys
-        merged_for_context = {**full_scope, **new_extracted}
-        
-        # 4. Clean ephemeral keywords
-        clean_context = {k: v for k, v in merged_for_context.items() if k not in ("msg", "data")}
+        # Merge incoming context + newly extracted keys
+        incoming_context = (state.get("context") if isinstance(state, dict) else getattr(state, "context", {})) or {}
+        clean_context = {**incoming_context, **new_extracted}
+        clean_context.pop("msg", None)
+        clean_context.pop("data", None)
+        clean_context.pop("context", None)
         
         # We return an AI Message so the follow-up nodes (or UI) treats it as a response
         return {

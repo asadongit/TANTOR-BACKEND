@@ -16,6 +16,7 @@ AGENTMESH_API_PREFIX = "/api/v1/agentmesh"
 PUBLIC_AGENTMESH_PATHS = {
     f"{AGENTMESH_API_PREFIX}/health",
     f"{AGENTMESH_API_PREFIX}/execution/upload-temp",
+    f"{AGENTMESH_API_PREFIX}/execution/upload-artifact",
 }
 WEBHOOK_PATH_PREFIX = f"{AGENTMESH_API_PREFIX}/webhook/"
 VAPT_PATH_PREFIX = f"{AGENTMESH_API_PREFIX}/vapt/"
@@ -79,7 +80,7 @@ def requires_agentmesh_authentication(method: str, path: str) -> bool:
         return False
     if path.startswith(VAPT_PATH_PREFIX):
         return False
-    if path.startswith(f"{AGENTMESH_API_PREFIX}/workflow/") and path.endswith("/execute"):
+    if normalized_path.startswith(f"{AGENTMESH_API_PREFIX}/workflow/") and normalized_path.endswith("/execute"):
         return False
     return True
 

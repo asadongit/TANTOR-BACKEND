@@ -319,17 +319,32 @@ class GraphCompiler:
             # jump straight back to them.
             skip_pre_gate = context.get("skip_pre_gate", False)
 
-            if dynamic_resumption and active_agent and active_agent in all_node_ids:
+            resumable_types = {
+                "llm_agent",
+                "deep_agent",
+                "supervisor",
+                "swarm",
+                "human_interaction",
+                "form_node",
+            }
+
+            if (
+                dynamic_resumption
+                and active_agent
+                and active_agent in all_node_ids
+                and node_types.get(active_agent) in resumable_types
+            ):
                 target_id = active_agent
                 if (
-                    not skip_pre_gate
+                    hitl_action == "rework"
+                    and not skip_pre_gate
                     and pre_gate_redirects
                     and active_agent in pre_gate_redirects
                 ):
                     target_id = pre_gate_redirects[active_agent]
 
                 logger.debug(
-                    f"Entry Router - Dynamic Resumption active, jumping back to agent '{active_agent}'"
+                    f"Entry Router - Dynamic Resumption active, jumping back to agent '{active_agent}' (Target: {target_id})"
                 )
                 return target_id
 
@@ -898,61 +913,7 @@ class GraphCompiler:
             )
             return
 
-        # Sub-case: Agent -> Tools Routing
-        other_edges = [e for e in group if not cls._is_tool_edge(workflow, e)]
-
-        # Fetch source node configuration for return_direct setting
-        is_return_direct = bool(source_config and source_config.return_direct)
-
-        if tool_edges or error_target:
-            tool_target = tool_edges[0].target if tool_edges else None
-            path_map = {"continue": END}
-            if tool_target:
-                path_map["tools"] = tool_target
-                path_map["human_gate"] = "human_gate"
-            if error_target:
-                path_map["error"] = error_target
-
-            if other_edges:
-                if is_return_direct:
-                    path_map["continue"] = END
-                else:
-                    targets_list = [e.target for e in other_edges]
-                    normalized_targets = list(
-                        set((END if t in ["END", "end"] else t) for t in targets_list)
-                    )
-                    path_map["continue"] = (
-                        normalized_targets[0] if normalized_targets else END
-                    )
-
-            # Use the combined router if we have ANY non-static logic (tools OR errors)
-            def combined_logic_router(state: AgentState):
-                # Always prioritize Error handling
-                if error_target and state.get("error"):
-                    return "error"
-                # Then Tool calls — Fix #5: guard against empty messages list before indexing
-                messages = state.get("messages", [])
-                if (
-                    tool_target
-                    and messages
-                    and GraphCompiler._has_tool_calls(messages[-1])
-                ):
-                    last_msg = messages[-1]
-                    tool_calls = getattr(last_msg, "tool_calls", []) or []
-                    # Fix #10: delegate to shared helper instead of duplicating the loop
-                    if cls._check_tool_interrupt(tool_calls, source_config):
-                        logger.info(
-                            f"Tool execution requires human approval. Routing to 'human_gate'"
-                        )
-                        return "human_gate"
-                    return "tools"
-                return "continue"
-
-            combined_logic_router.__name__ = f"logic_router_{source_id}"
-            graph.add_conditional_edges(source_id, combined_logic_router, path_map)
-            return
-
-        # Case: Handle-based Routing (Logic Nodes like Switch/Condition)
+        # Case: Handle-based Routing (Logic Nodes like Switch/Condition, Splitter)
         handle_edges = [e for e in group if e.source_handle]
         if handle_edges:
             # ── Parallel Fan-Out Detection ──
@@ -1006,6 +967,9 @@ class GraphCompiler:
                     else_target = pre_gate_redirects[else_target]
                 path_map["else"] = else_target
 
+            if error_target:
+                path_map["error"] = error_target
+
             # ✅ CRITICAL: Always include END in the map to prevent KeyError: '__end__'
             if END not in path_map:
                 path_map[END] = END
@@ -1013,6 +977,9 @@ class GraphCompiler:
                 path_map["else"] = path_map.get("else") or END
 
             def handle_router(state: AgentState):
+                if error_target and state.get("error"):
+                    return "error"
+
                 # We normalize intent to lowercase for matching handles
                 intent = str(state.get("intent", "else")).lower()
                 logger.debug(
@@ -1029,6 +996,60 @@ class GraphCompiler:
 
             handle_router.__name__ = f"handle_router_{source_id}"
             graph.add_conditional_edges(source_id, handle_router, path_map)
+            return
+
+        # Sub-case: Agent -> Tools Routing / Error recovery for non-handle nodes
+        other_edges = [e for e in group if not cls._is_tool_edge(workflow, e)]
+
+        # Fetch source node configuration for return_direct setting
+        is_return_direct = bool(source_config and source_config.return_direct)
+
+        if tool_edges or error_target:
+            tool_target = tool_edges[0].target if tool_edges else None
+            path_map = {"continue": END}
+            if tool_target:
+                path_map["tools"] = tool_target
+                path_map["human_gate"] = "human_gate"
+            if error_target:
+                path_map["error"] = error_target
+
+            if other_edges:
+                if is_return_direct:
+                    path_map["continue"] = END
+                else:
+                    targets_list = [e.target for e in other_edges]
+                    normalized_targets = list(
+                        set((END if t in ["END", "end"] else t) for t in targets_list)
+                    )
+                    path_map["continue"] = (
+                        normalized_targets[0] if normalized_targets else END
+                    )
+
+            # Use the combined router if we have ANY non-static logic (tools OR errors)
+            def combined_logic_router(state: AgentState):
+                # Always prioritize Error handling
+                if error_target and state.get("error"):
+                    return "error"
+                # Then Tool calls — Fix #5: guard against empty messages list before indexing
+                messages = state.get("messages", [])
+                if (
+                    tool_target
+                    and messages
+                    and GraphCompiler._has_tool_calls(messages[-1])
+                ):
+                    last_msg = messages[-1]
+                    tool_calls = getattr(last_msg, "tool_calls", []) or []
+                    # Fix #10: delegate to shared helper instead of duplicating the loop
+                    if cls._check_tool_interrupt(tool_calls, source_config):
+                        logger.info(
+                            f"Tool execution requires human approval. Routing to 'human_gate'"
+                        )
+                        return "human_gate"
+                    return "tools"
+                return "continue"
+
+            combined_logic_router.__name__ = f"logic_router_{source_id}"
+            graph.add_conditional_edges(source_id, combined_logic_router, path_map)
             return
 
         # Case: Standard Static Edge or Fan-out (Broadcast)

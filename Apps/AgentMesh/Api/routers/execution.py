@@ -36,7 +36,7 @@ async def execute_workflow(workflow_id: str, request: ExecuteWorkflowRequest, db
         if not w.is_active:
             raise HTTPException(status_code=400, detail="Workflow is paused. Resume it to run.")
 
-        if request.mode == "resume":
+        if request.mode == "resume" or (request.action and request.mode != "stream"):
             if not request.action:
                 raise HTTPException(status_code=400, detail="action is required for resume mode")
             result = await WorkflowService.resume(

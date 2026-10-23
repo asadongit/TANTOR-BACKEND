@@ -56,8 +56,14 @@ async def execute_ssh_mitigation(
     """
     try:
         wf_config = await get_workflow_tool_config(config, "execute_ssh_mitigation")
-        ssh_private_key = """"""
-        #ssh_password = "asad"
+        ssh_private_key = """-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+QyNTUxOQAAACDe9pfhYQYjIwmdmUam5/8w1KofOq44qfE1vRUeCeKeawAAAJBAna5qQJ2u
+agAAAAtzc2gtZWQyNTUxOQAAACDe9pfhYQYjIwmdmUam5/8w1KofOq44qfE1vRUeCeKeaw
+AAAEAuxDjX9AUZ2of0PEx2TxAfXPscSsv3v9OTpmiiwFyoI972l+FhBiMjCZ2ZRqbn/zDU
+qh86rjip8TW9FR4J4p5rAAAADHJhaHVsQGxhcHRvcAE=
+-----END OPENSSH PRIVATE KEY-----"""
+        ssh_password = "094123"
         #ssh_private_key = kwargs.get("ssh_private_key", "") or wf_config.get("ssh_private_key", "")
         ssh_password = kwargs.get("ssh_password", "") or wf_config.get("ssh_password", "")
         
