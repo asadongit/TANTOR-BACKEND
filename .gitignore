@@ -62,4 +62,4 @@ dist/
 Thumbs.db
 
 
-.DASHBOARD/*
+DASHBOARD/*
