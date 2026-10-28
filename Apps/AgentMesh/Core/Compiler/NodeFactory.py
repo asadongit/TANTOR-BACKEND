@@ -76,6 +76,10 @@ _NODE_BUILDER_MAP: Dict[str, Callable] = {
     "jev_node": node_builders.build_jev_node,
     "typesafe_ai": node_builders.build_jev_node,
     "system_one": node_builders.build_jev_node,
+    "laya": node_builders.build_laya_node,
+    "laya_node": node_builders.build_laya_node,
+    "laya_decision": node_builders.build_laya_node,
+    "local_decision": node_builders.build_laya_node,
 }
 
 
@@ -114,6 +118,9 @@ class NodeFactory:
         "systemOne": "jev_node",
         "systemone": "jev_node",
         "typesafe_system_one": "jev_node",
+        "layaNode": "laya_node",
+        "layaDecision": "laya_node",
+        "localDecision": "laya_node",
     }
 
     @classmethod

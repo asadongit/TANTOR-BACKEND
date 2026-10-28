@@ -414,9 +414,11 @@ def build_set_data_node(node_config: NodeConfig) -> Callable:
         clean_context.pop("data", None)
         clean_context.pop("context", None)
         
-        # We return an AI Message so the follow-up nodes (or UI) treats it as a response
+        # We return an AI Message so the follow-up nodes (or UI) treats it as a response, unless muted
+        is_muted = getattr(node_config, "mute_chat_bubble", False)
+        out_messages = [] if is_muted else [AIMessage(content=interpolated_msg, response_metadata={"active_agent": node_config.id})]
         return {
-            "messages": [AIMessage(content=interpolated_msg, response_metadata={"active_agent": node_config.id})],
+            "messages": out_messages,
             "active_agent": node_config.id,
             "context": clean_context
         }

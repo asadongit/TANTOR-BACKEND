@@ -14,11 +14,13 @@ from Apps.AgentMesh.Utilities.LLM.llm_config import get_llm_provider
 from langchain_core.messages import HumanMessage
 from Apps.AgentMesh.Core.Services.WorkflowService import WorkflowService
 from Apps.AgentMesh.Core.Compiler.nodes.jev_node import (
-    _evaluate_state_with_jev,
+    _build_item_state,
+    evaluate_state_with_usage,
     _extract_answers_from_response,
-    _format_item_state,
     DEFAULT_TYPESAFE_API_URL,
     get_jev_progress,
+    subscribe_jev_progress,
+    unsubscribe_jev_progress,
 )
 
 logger = logging.getLogger(__name__)
@@ -256,23 +258,69 @@ def format_single_record(item: Dict[str, Any], idx: int) -> Tuple[Dict[str, Any]
     cat_lower = str(raw_cat or "").strip().lower()
     category = DISPLAY_CATEGORY_MAP.get(cat_lower, str(raw_cat).strip() if raw_cat else "Other/General")
 
-    # Calibrated confidence from Jev Engine
-    confidence = item.get("confidence") or item.get("category_confidence")
+    # Confidence reported by the classifier. Resolved from the primary choice
+    # answer's own <question_id>_confidence field, never from a hardcoded list of
+    # question ids, and never invented when absent: a row with no model answer
+    # must not display as if it were 90% certain.
+    confidence = None
+    for key, val in item.items():
+        if isinstance(key, str) and key.endswith("_confidence") and val is not None:
+            confidence = val
+            break
     if confidence is None:
-        jev_evals = item.get("jev_evaluations", {})
+        confidence = item.get("confidence") or item.get("category_confidence")
+    if confidence is None:
+        jev_evals = item.get("jev_evaluations")
         if isinstance(jev_evals, dict):
-            for qk in ("category", "vulnerability_category"):
-                if qk in jev_evals and isinstance(jev_evals[qk], dict) and "confidence" in jev_evals[qk]:
-                    confidence = jev_evals[qk]["confidence"]
+            for eval_value in jev_evals.values():
+                if isinstance(eval_value, dict) and "confidence" in eval_value:
+                    confidence = eval_value["confidence"]
                     break
-            if confidence is None and jev_evals:
-                first_eval = next(iter(jev_evals.values()), None)
-                if isinstance(first_eval, dict) and "confidence" in first_eval:
-                    confidence = first_eval["confidence"]
     try:
-        conf_val = float(confidence) if confidence is not None else 0.90
+        conf_val = round(float(confidence), 2) if confidence is not None else None
     except (ValueError, TypeError):
-        conf_val = 0.90
+        conf_val = None
+
+    # Margin (top probability minus runner-up) is the ambiguity signal.
+    margin_val = None
+    for key, val in item.items():
+        if isinstance(key, str) and key.endswith("_margin") and val is not None:
+            try:
+                margin_val = round(float(val), 2)
+            except (ValueError, TypeError):
+                margin_val = None
+            break
+
+    # Top probability of the winning class
+    top_prob = item.get("top_probability") or item.get("vulnerability_category_top_prob")
+    if top_prob is None:
+        probs = item.get("vulnerability_category_probabilities")
+        if isinstance(probs, dict) and probs:
+            try:
+                top_prob = max(float(v) for v in probs.values())
+            except (ValueError, TypeError):
+                top_prob = None
+
+    # Determine jev_status and review reason based on dual OR condition:
+    # (model_confidence < 0.60) OR (top_prob < 0.60)
+    # The finding ALWAYS stays in its winning category tab (Preserve Top Category rule).
+    jev_status = item.get("jev_status")
+    jev_review_reason = item.get("jev_review_reason")
+
+    if not jev_status or jev_status in ("evaluated", "needs_review", "classified"):
+        is_below_conf = (conf_val is not None and conf_val < 0.60)
+        is_below_prob = (top_prob is not None and top_prob < 0.60)
+        if is_below_conf or is_below_prob or jev_status == "needs_review":
+            jev_status = "needs_review"
+            if not jev_review_reason:
+                reasons = []
+                if is_below_conf:
+                    reasons.append(f"Model confidence {int(conf_val*100)}% < 60%")
+                if is_below_prob:
+                    reasons.append(f"Top probability {int(top_prob*100)}% < 60%")
+                jev_review_reason = "Needs review: " + "; ".join(reasons) if reasons else "Flagged for manual review"
+        else:
+            jev_status = "classified"
 
     solution = resolve_field(item, ["solution", "remediation", "fix", "mitigation"])
     if not solution:
@@ -284,12 +332,15 @@ def format_single_record(item: Dict[str, Any], idx: int) -> Tuple[Dict[str, Any]
         "severity": norm_sev,
         "raw_severity": raw_sev,
         "category": category,
-        "confidence": round(conf_val, 2),
+        "confidence": conf_val,
+        "top_probability": round(float(top_prob), 2) if top_prob is not None else None,
+        "margin": margin_val,
         "host": host,
         "cve": cve or f"ID-{idx + 1}",
         "solution": solution,
         "status": "Pending",
-        "jev_status": item.get("jev_status", "evaluated"),
+        "jev_status": jev_status,
+        "jev_review_reason": jev_review_reason,
     }
     return record, norm_sev, category
 
@@ -333,16 +384,24 @@ def build_findings_payload(items: List[Dict[str, Any]], thread_id: str = "") -> 
         if len(cat_map[category]) < 250:
             cat_map[category].append(record)
 
-        # Track per-category severity breakdown
+        # Track per-category severity and needs_review breakdown
         if category not in category_severity_stats:
-            category_severity_stats[category] = {"total": 0, "Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
+            category_severity_stats[category] = {
+                "total": 0, "Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0, "needs_review": 0
+            }
         category_severity_stats[category]["total"] += 1
         category_severity_stats[category][norm_sev] = category_severity_stats[category].get(norm_sev, 0) + 1
+        if record.get("jev_status") == "needs_review":
+            category_severity_stats[category]["needs_review"] = category_severity_stats[category].get("needs_review", 0) + 1
 
     # Ensure all standard categories have an entry
     for c in STANDARD_CATEGORIES:
         if c not in category_severity_stats:
-            category_severity_stats[c] = {"total": 0, "Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0}
+            category_severity_stats[c] = {
+                "total": 0, "Critical": 0, "High": 0, "Medium": 0, "Low": 0, "Info": 0, "needs_review": 0
+            }
+        elif "needs_review" not in category_severity_stats[c]:
+            category_severity_stats[c]["needs_review"] = 0
 
     # Donut chart array (exact color palette expected by VaptApp.jsx)
     pts_data = [
@@ -575,6 +634,7 @@ async def get_vapt_findings_page(
     page_size: int = Query(50, ge=5, le=500, description="Items per page"),
     search: Optional[str] = Query(None, description="Search keyword in name, CVE, host, or solution"),
     severity: Optional[str] = Query(None, description="Filter by severity (Critical, High, Medium, Low, Info)"),
+    status: Optional[str] = Query(None, description="Filter by status (classified, needs_review)"),
     workflow_id: Optional[str] = None
 ):
     """
@@ -625,6 +685,11 @@ async def get_vapt_findings_page(
         if severity and severity.strip():
             sev_target = normalize_severity_label(severity).lower()
             records = [r for r in records if r.get("severity", "").lower() == sev_target]
+
+        # Filter by status if specified (e.g. needs_review or classified)
+        if status and status.strip():
+            st_target = status.strip().lower()
+            records = [r for r in records if str(r.get("jev_status", "")).lower() == st_target]
 
         # Filter by search keyword if specified
         if search and search.strip():
@@ -776,8 +841,8 @@ async def process_vapt_findings_direct(request: Request):
 @router.get("/progress/{thread_id}")
 async def get_vapt_progress(thread_id: str):
     """
-    Returns real-time Jev evaluation progress for a given workflow session thread.
-    Used by the Tantor UI VAPT Dashboard to render live progress and live classified findings.
+    Returns real-time Jev/Laya evaluation progress for a given workflow session thread.
+    Used by the Tantor UI VAPT Dashboard as fallback query.
     """
     prog = get_jev_progress(thread_id)
     if not prog:
@@ -790,10 +855,64 @@ async def get_vapt_progress(thread_id: str):
         "percent": prog.get("percent", 0.0),
         "node_id": prog.get("node_id"),
     }
-    records = prog.get("records")
-    if records and isinstance(records, list) and len(records) > 0:
-        res["dashboard_data"] = build_findings_payload(records, thread_id=thread_id)
+    if "dashboard_data" in prog and prog["dashboard_data"]:
+        res["dashboard_data"] = prog["dashboard_data"]
+    else:
+        records = prog.get("records")
+        if records and isinstance(records, list) and len(records) > 0:
+            res["dashboard_data"] = build_findings_payload(records, thread_id=thread_id)
+        elif prog.get("checkpoint_path") and os.path.exists(prog["checkpoint_path"]):
+            try:
+                with open(prog["checkpoint_path"], "r", encoding="utf-8") as f:
+                    chk_records = json.load(f)
+                if isinstance(chk_records, list) and len(chk_records) > 0:
+                    res["dashboard_data"] = build_findings_payload(chk_records, thread_id=thread_id)
+            except Exception:
+                pass
     return res
+
+
+@router.get("/progress/{thread_id}/stream")
+async def stream_vapt_progress(thread_id: str):
+    """
+    Server-Sent Events (SSE) streaming endpoint for live VAPT evaluation progress & findings.
+    Pushes real-time progress and classified findings directly to the Tantor UI dashboard.
+    """
+    queue = subscribe_jev_progress(thread_id)
+
+    async def event_generator():
+        try:
+            # 1. Send immediate snapshot if current progress exists
+            current = get_jev_progress(thread_id)
+            if current:
+                yield f"data: {json.dumps(current, default=str)}\n\n"
+                if current.get("status") in ("completed", "error"):
+                    return
+
+            # 2. Stream subsequent progress events pushed by node
+            while True:
+                try:
+                    event = await asyncio.wait_for(queue.get(), timeout=20.0)
+                    yield f"data: {json.dumps(event, default=str)}\n\n"
+                    if event.get("status") in ("completed", "error"):
+                        break
+                except asyncio.TimeoutError:
+                    # Keep-alive comment for long-running evaluations
+                    yield ": keep-alive\n\n"
+        except asyncio.CancelledError:
+            pass
+        finally:
+            unsubscribe_jev_progress(thread_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
 
 
 class JevStreamEvaluateRequest(BaseModel):
@@ -801,7 +920,7 @@ class JevStreamEvaluateRequest(BaseModel):
     questions: Dict[str, Dict[str, Any]] = Field(..., description="Canvas questions config (choice, noul, score).")
     model: str = Field("jev-latest", description="TypeSafe AI model name.")
     concurrency: int = Field(25, description="Max concurrent HTTP requests to Jev API.")
-    batch_progress_size: int = Field(100, description="Rows to evaluate before emitting one SSE progress event.")
+    batch_progress_size: int = Field(10, description="Rows to evaluate before emitting one SSE progress event.")
     api_key: Optional[str] = Field(None, description="Optional TypeSafe API key override.")
     api_url: Optional[str] = Field(None, description="Optional TypeSafe API URL override.")
 
@@ -840,40 +959,42 @@ async def jev_stream_evaluate(request: JevStreamEvaluateRequest):
         completed_count = 0
 
         async def process_item(item: Any, http_client: httpx.AsyncClient) -> Any:
-            state_str = _format_item_state(item, None, None)
-            eval_result = {}
-            eval_status = "evaluated"
-            eval_error = None
-            if api_key:
-                async with semaphore:
-                    try:
-                        eval_result = await _evaluate_state_with_jev(
-                            http_client, api_url, api_key, model, state_str, questions
-                        )
-                    except Exception as exc:
-                        eval_status = "error"
-                        eval_error = str(exc)
-            else:
-                eval_status = "unclassified"
-                eval_error = "TYPESAFE_API_KEY not configured"
+            state_value, state_meta = _build_item_state(item, None, None)
+            row = dict(item) if isinstance(item, dict) else {"original": item}
+            row["jev_fields_sent"] = state_meta["fields_sent"]
 
-            extracted = _extract_answers_from_response(eval_result, questions)
-            if isinstance(item, dict):
-                tagged = dict(item)
-                tagged.update(extracted)
-                tagged["jev_status"] = eval_status
-                if eval_error:
-                    tagged["jev_error"] = eval_error
-                tagged["jev_evaluations"] = eval_result
-                return tagged
-            else:
-                return {
-                    "original": item,
-                    **extracted,
-                    "jev_status": eval_status,
-                    "jev_error": eval_error,
-                    "jev_evaluations": eval_result,
-                }
+            # Refuse to spend a request the state cannot support.
+            if not state_meta["usable"]:
+                row["jev_status"] = "insufficient_state"
+                row["jev_error"] = "No usable state fields resolved for this row."
+                row["jev_evaluations"] = {}
+                return row
+
+            if not api_key:
+                row["jev_status"] = "insufficient_state"
+                row["jev_error"] = "TYPESAFE_API_KEY not configured"
+                row["jev_evaluations"] = {}
+                return row
+
+            answers: Dict[str, Any] = {}
+            async with semaphore:
+                try:
+                    answers, _usage = await evaluate_state_with_usage(
+                        http_client, api_url, api_key, model, state_value, questions
+                    )
+                except Exception as exc:
+                    row["jev_status"] = "error"
+                    row["jev_error"] = str(exc)
+                    row["jev_evaluations"] = {}
+                    return row
+
+            extracted, review_reason = _extract_answers_from_response(answers, questions)
+            row.update(extracted)
+            row["jev_status"] = "needs_review" if review_reason else "classified"
+            if review_reason:
+                row["jev_review_reason"] = review_reason
+            row["jev_evaluations"] = answers
+            return row
 
         async with httpx.AsyncClient(timeout=15.0, limits=limits) as http_client:
             for chunk_start in range(0, total_items, chunk_size):

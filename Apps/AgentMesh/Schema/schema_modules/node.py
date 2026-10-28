@@ -1223,7 +1223,7 @@ class NodeConfig(BaseModel):
     # ── Jev (System One by TypeSafe AI) Specific Configs ───────────────────────
     jev_model: str = Field(
         "jev-latest",
-        description="TypeSafe AI model version: 'jev-latest', 'jev-1.14', etc.",
+        description="TypeSafe model name or alias: 'jev-latest', 'jev-1.14.0', 'jev-1.13.0'. See GET /v1/models.",
     )
     jev_api_key_env: str = Field(
         "TYPESAFE_API_KEY",
@@ -1246,44 +1246,177 @@ class NodeConfig(BaseModel):
         "excel_json_data",
         description="Context key where evaluated/tagged records or answers will be stored.",
     )
-    jev_mode: str = Field(
-        "items",
-        description="Evaluation mode: 'items' iterates over a list/collection of records; 'single' evaluates one unified state.",
-    )
     jev_item_fields: Optional[List[str]] = Field(
         None,
-        description="Optional list of column/field names to extract from each item to build the state string (e.g. ['Plugin Name', 'Plugin Family']).",
+        description=(
+            "Columns sent to the model as the row's state. Honoured exactly: a column that is not "
+            "present in the input is reported in the log and left out, never silently replaced. "
+            "Leave empty to use the built-in scanner-agnostic priority field list. "
+            "Example (Nessus): ['Vulnerability Name', 'Description', 'Plugin Output', 'Solution']."
+        ),
     )
-    jev_tag_target_key: str = Field(
-        "category",
-        description="The key on each item to write the winning choice/category answer into.",
+    jev_tag_target_key: Optional[str] = Field(
+        None,
+        description=(
+            "Optional column name to mirror the primary choice answer into (e.g. 'category'). "
+            "Answers are always also stored under their question id."
+        ),
+    )
+    jev_tag_key_mode: str = Field(
+        "replace",
+        description=(
+            "'replace' overwrites the target column with the Jev choice; 'preserve' only fills it "
+            "when the source row has no value there."
+        ),
     )
     jev_state_template: Optional[str] = Field(
         None,
-        description="Optional Jinja2/f-string template to format each state string.",
+        description="Optional Jinja2 template to render each row's state as a string instead of a structured object.",
     )
     jev_questions: Dict[str, Dict[str, Any]] = Field(
         default_factory=dict,
-        description="Dictionary of typed questions: {question_id: {type: 'choice'|'score'|'noul', instructions: str, criteria?: dict, options?: list, levels?: list}}",
+        description="Dictionary of typed questions: {question_id: {type: 'choice'|'score'|'noul', instructions: str, criteria?: dict|list, options?: list, levels?: list}}",
     )
     jev_confidence_gate: Optional[float] = Field(
+        0.60,
+        description=(
+            "Model confidence threshold. Flags rows whose reported confidence score is below this "
+            "value as 'needs_review'. Configurable from canvas (default 0.60)."
+        ),
+    )
+    jev_top_prob_gate: Optional[float] = Field(
+        0.60,
+        description=(
+            "Top choice probability threshold. Flags rows whose top option probability is below this "
+            "value as 'needs_review'. Configurable from canvas (default 0.60)."
+        ),
+    )
+    jev_margin_gate: Optional[float] = Field(
         None,
-        description="Optional confidence threshold. If set, items with lower confidence can be flagged.",
+        description=(
+            "Optional. Flags rows where (top probability - runner-up probability) is below this "
+            "value as 'needs_review'. This is the recommended ambiguity signal for choice questions; "
+            "0.3-0.5 is a reasonable starting range to calibrate on labelled data."
+        ),
+    )
+    jev_max_state_chars: Optional[int] = Field(
+        None,
+        description=(
+            "Optional cap on the total characters of state sent per row. Useful for very long "
+            "plugin output; keeps requests inside the per-request context limit."
+        ),
+    )
+    jev_long_context: bool = Field(
+        False,
+        description=(
+            "Send the TypeSafe-Danger-Zone-Long-Context header, raising the per-request and "
+            "per-question limits to 262k tokens. Slower and less accurate; use only when needed."
+        ),
     )
     jev_timeout_seconds: float = Field(
-        15.0,
+        60.0,
         description="HTTP timeout for the TypeSafe API call in seconds.",
     )
     jev_concurrency: int = Field(
         25,
         description="Max concurrent requests to Jev API when processing items in a list.",
     )
+    jev_max_retries: int = Field(
+        3,
+        description="Attempts per row for transient failures (429, 5xx, timeouts, connection and protocol errors).",
+    )
+    jev_retry_base_delay: float = Field(
+        1.0,
+        description="Base seconds for exponential backoff between retries; Retry-After is honoured when sent.",
+    )
+    jev_checkpoint_every_chunk: bool = Field(
+        True,
+        description=(
+            "Persist tagged rows atomically after each chunk so an interrupted or failed run never "
+            "loses already-paid-for evaluations. Only applies when the input came from a JSON file."
+        ),
+    )
+    jev_abort_on_fatal_error: bool = Field(
+        True,
+        description=(
+            "Stop the scan on non-retryable errors (401/403/400/422) instead of marking every "
+            "remaining row as failed."
+        ),
+    )
+
+    # ── Laya (local / on-prem decision model) Specific Configs ────────────────
+    # The Laya node reuses the jev_* fields below for input/output keys, questions
+    # and gating, so a workflow can swap Jev for Laya without reconfiguring them:
+    # jev_input_key, jev_output_key, jev_item_fields, jev_state_template,
+    # jev_questions, jev_tag_target_key, jev_tag_key_mode, jev_confidence_gate,
+    # jev_margin_gate, jev_batch_progress_size, jev_stream_progress,
+    # jev_checkpoint_every_chunk.
+    laya_endpoint: str = Field(
+        "http://127.0.0.1:8770",
+        description=(
+            "Base URL of the Laya service. Accepts a host:port, a base URL, or a full "
+            "/predict URL. Examples: 'http://127.0.0.1:8770' (local sidecar), "
+            "'http://10.48.5.20:8770' (Laya on another host)."
+        ),
+    )
+    laya_api_token_env: str = Field(
+        "LAYA_API_TOKEN",
+        description="Environment variable holding the bearer token for a network-reachable Laya service.",
+    )
+    laya_api_token: Optional[str] = Field(
+        None,
+        description="Direct bearer token override for the Laya service. Leave empty to read from the env var.",
+        repr=False,
+    )
+    laya_api_key: Optional[str] = Field(
+        None,
+        description="Alias for laya_api_token. Direct API key / bearer token override for Laya service.",
+        repr=False,
+    )
+    laya_lang: str = Field(
+        "en",
+        description="Language hint sent to Laya. The English checkpoint is English-only; leave as 'en'.",
+    )
+    laya_concurrency: int = Field(
+        10,
+        description=(
+            "Max concurrent requests to the Laya service. Default is 10. "
+            "Raise or lower based on your Laya server capacity and measured latency."
+        ),
+    )
+    laya_timeout_seconds: float = Field(
+        60.0,
+        description="HTTP timeout per Laya request in seconds. Generous default for CPU inference.",
+    )
+    laya_max_retries: int = Field(
+        3,
+        description="Attempts per row for transient failures (429, 5xx, timeouts, connection errors).",
+    )
+    laya_retry_base_delay: float = Field(
+        1.0,
+        description="Base seconds for exponential backoff between retries; Retry-After is honoured when sent.",
+    )
+    laya_max_state_chars: Optional[int] = Field(
+        1200,
+        description=(
+            "Character budget for the state sent per row. The English Laya checkpoint reads about "
+            "512 tokens in total including options, so this leaves room for the question and "
+            "criteria. Lower it if option lists are long."
+        ),
+    )
+    laya_abort_on_fatal_error: bool = Field(
+        True,
+        description=(
+            "Stop the scan when the service is unreachable or rejects the configuration, instead "
+            "of marking every remaining row as failed."
+        ),
+    )
     jev_batch_progress_size: int = Field(
-        100,
+        10,
         description=(
             "Number of rows to complete before emitting one SSE progress event. "
-            "Configurable from canvas (e.g. 50, 100, 200). Default is 100. "
-            "Only used when jev_stream_progress is True or via stream-evaluate."
+            "Configurable from canvas (e.g. 10, 25, 50). Default is 10. "
+            "Used for SSE streaming progress events and checkpointing."
         ),
     )
     jev_stream_progress: bool = Field(
@@ -1293,9 +1426,9 @@ class NodeConfig(BaseModel):
             "rows complete during workflow execution."
         ),
     )
-    jev_fallback_to_heuristic: bool = Field(
-        False,
-        description="Deprecated/Disabled. If True, allowed keyword heuristics. Now strictly defaults to False for accurate unclassified tagging.",
-    )
+    # REMOVED: jev_fallback_to_heuristic and jev_mode. Neither was ever read by
+    # the node builder. Leaving them in the schema advertised config that did
+    # nothing on the canvas. `jev_mode` is replaced by the real distinction:
+    # items mode evaluates each row; there is no single-state mode today.
 
 
