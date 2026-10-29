@@ -269,13 +269,29 @@ class VaptSanitizer:
         """
         result_row = dict(row)
 
-        ans = answers.get("vulnerability_category", {})
+        # Extract category answer - supports vulnerability_category, layer, category, or first choice question
+        ans = (
+            answers.get("vulnerability_category")
+            or answers.get("layer")
+            or answers.get("category")
+        )
+        if not ans and isinstance(answers, dict):
+            for k, v in answers.items():
+                if isinstance(v, dict) and "choice" in v:
+                    ans = v
+                    break
+
         if not isinstance(ans, dict) or not ans:
             # Fallback if answer is missing
             result_row["category"] = "other"
             result_row["jev_status"] = "needs_review"
             result_row["jev_review_reason"] = "Missing category response from model"
             return result_row
+
+        # Store individual question answers directly on the row
+        for q_id, q_eval in answers.items():
+            if isinstance(q_eval, dict) and "choice" in q_eval:
+                result_row[q_id] = q_eval.get("choice")
 
         raw_choice = str(ans.get("choice") or "").strip().lower()
         probs = ans.get("probabilities", {}) or {}

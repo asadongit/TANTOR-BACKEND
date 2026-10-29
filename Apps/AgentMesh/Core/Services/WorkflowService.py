@@ -674,10 +674,19 @@ class WorkflowService:
         # Inject workflow variables from Postgres into the context
         wf_vars = await cls._load_workflow_variables(workflow_id)
 
+        # Resolve target_node_id if active_agent was button_trigger_start or empty
+        effective_target = target_node_id
+        if not effective_target:
+            curr_agent = existing_state.get("active_agent")
+            if curr_agent and curr_agent != "button_trigger_start":
+                effective_target = curr_agent
+            elif config_obj:
+                # Find the main agent node in the workflow (e.g. deep_agent or llm_agent)
+                effective_target = next((n.id for n in config_obj.nodes if n.type in ("deep_agent", "llm_agent")), None)
+
         run_state = {
-            "active_agent": target_node_id
-            if target_node_id
-            else existing_state.get("active_agent"),
+            "active_agent": effective_target or existing_state.get("active_agent"),
+            "target_node_id": effective_target,
             "messages": [HumanMessage(content=input_text)],
             "context": {
                 **(existing_state.get("context") or {}),
@@ -685,6 +694,7 @@ class WorkflowService:
                 "workflow_id": workflow_id,
                 "workflow_name": workflow_name,
                 "thread_id": thread_id,
+                "target_node_id": effective_target,
                 "workflow_variables": wf_vars,
             },
         }

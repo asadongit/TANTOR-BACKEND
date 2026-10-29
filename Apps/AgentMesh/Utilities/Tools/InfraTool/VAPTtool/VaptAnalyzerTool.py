@@ -109,7 +109,7 @@ def analyze_vapt_csv(
                 solution = "No solution provided."
 
             # Calibrated category stamped by Jev Engine
-            raw_row_cat = _get_cell(row, "category")
+            raw_row_cat = _get_cell(row, "category") or _get_cell(row, "vulnerability_category") or _get_cell(row, "layer")
             cat_map = {
                 "os": "OS",
                 "db": "Database",

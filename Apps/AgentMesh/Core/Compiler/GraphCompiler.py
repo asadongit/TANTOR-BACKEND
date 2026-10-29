@@ -315,8 +315,13 @@ class GraphCompiler:
                 )
                 return target_id
 
-            # ✅ RESUMPTION JUMP (OPTIONAL): If we have an active agent and dynamic resumption is enabled,
-            # jump straight back to them.
+            # ✅ EXPLICIT TARGET: If caller specified a target node, jump directly to it
+            explicit_target = state.get("target_node_id") or context.get("target_node_id")
+            if explicit_target and explicit_target in all_node_ids:
+                logger.info(f"Entry Router - Explicit target_node_id routed: '{explicit_target}'")
+                return explicit_target
+
+            # ✅ RESUMPTION JUMP: If we have an active agent, jump straight back to them.
             skip_pre_gate = context.get("skip_pre_gate", False)
 
             resumable_types = {
@@ -329,8 +334,7 @@ class GraphCompiler:
             }
 
             if (
-                dynamic_resumption
-                and active_agent
+                active_agent
                 and active_agent in all_node_ids
                 and node_types.get(active_agent) in resumable_types
             ):

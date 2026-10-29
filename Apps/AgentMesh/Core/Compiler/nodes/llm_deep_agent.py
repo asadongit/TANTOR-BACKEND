@@ -91,8 +91,7 @@ def build_llm_deep_agent(node_config: NodeConfig, all_nodes: List[NodeConfig] = 
         backend = ContextHubBackend(hub_repo)
     else:
         # Use StateBackend for postgres, sqlite, or durable (standardizes on LangGraph checkpoints)
-        # We use a factory lambda because StateBackend now requires a runtime at init.
-        backend = lambda runtime: StateBackend(runtime=runtime)
+        backend = StateBackend()
 
     # 3. Resolve Subagents (A2A / Mesh Delegation)
     resolved_subagents = []
